@@ -1,4 +1,4 @@
-package org.aihac.utils.pooler;
+package com.mclarkdev.tools.pooler;
 
 import java.util.Timer;
 import java.util.TimerTask;
@@ -26,11 +26,12 @@ public class ObjectPooler<T> {
 	private ConcurrentHashMap<T, PooledObjectLock> objectPool;
 
 	/**
-	 * Pooler constructor.
+	 * Construct a new generic object pool.
 	 * 
-	 * @param controller
-	 * @param maxPoolSize
-	 * @param idleTimeout
+	 * @param maxPoolSize The initial maximum size of the pool; this can be changed
+	 *                    at any time.
+	 * @param controller  The controller to use for managing the lifecycle of the
+	 *                    pooled objects.
 	 */
 	public ObjectPooler(int maxPoolSize, PooledObjectController<T> controller) {
 
@@ -52,7 +53,7 @@ public class ObjectPooler<T> {
 	/**
 	 * Lock and get an object.
 	 * 
-	 * @return
+	 * @return An instance of the object from the pool.
 	 */
 	public synchronized T get() throws PooledObjectException {
 
@@ -77,7 +78,7 @@ public class ObjectPooler<T> {
 	/**
 	 * Wait for an object lock.
 	 * 
-	 * @return
+	 * @return An instance of the object from the pool.
 	 */
 	public synchronized T getWait() {
 
@@ -90,7 +91,7 @@ public class ObjectPooler<T> {
 			} catch (Exception e) {
 
 				try {
-				
+
 					// release some cycles
 					Thread.sleep(1);
 				} catch (Exception ex) {
@@ -102,7 +103,7 @@ public class ObjectPooler<T> {
 	/**
 	 * Get the current size of the pool.
 	 * 
-	 * @return
+	 * @return The number of objects currently in the pool.
 	 */
 	public int getPoolSize() {
 
@@ -113,7 +114,7 @@ public class ObjectPooler<T> {
 	/**
 	 * Get the max size of the pool.
 	 * 
-	 * @return
+	 * @return The maximum number of objects allowed in the pool.
 	 */
 	public int getMaxPoolSize() {
 
@@ -123,7 +124,7 @@ public class ObjectPooler<T> {
 	/**
 	 * Set the max size of the pool.
 	 * 
-	 * @param maxPoolSize
+	 * @param maxPoolSize The maximum number of objects allowed in the pool.
 	 */
 	public void setMaxPoolSize(int maxPoolSize) {
 
@@ -134,8 +135,8 @@ public class ObjectPooler<T> {
 	/**
 	 * Release a locked object.
 	 * 
-	 * @param t
-	 * @return
+	 * @param t The locked object.
+	 * @return Returns true if the object was successfully returned to the pool.
 	 */
 	public synchronized boolean release(T t) {
 
@@ -154,7 +155,7 @@ public class ObjectPooler<T> {
 	/**
 	 * Get current number of locked objects.
 	 * 
-	 * @return
+	 * @return The number of objects in the pool that are currently locked.
 	 */
 	public int getNumLocked() {
 
@@ -174,7 +175,7 @@ public class ObjectPooler<T> {
 	/**
 	 * Get the current max object age.
 	 * 
-	 * @return
+	 * @return The age of the oldest object in the pool.
 	 */
 	public long getMaxAge() {
 
@@ -203,7 +204,8 @@ public class ObjectPooler<T> {
 	/**
 	 * Set the maximum allowed age of an object.
 	 * 
-	 * @param maxAge
+	 * @param maxAge Expire any objects which are older then the maximum allowable
+	 *               age.
 	 */
 	public void setMaxAge(long maxAge) {
 
@@ -213,7 +215,7 @@ public class ObjectPooler<T> {
 	/**
 	 * Get the current max object idle time.
 	 * 
-	 * @return
+	 * @return The maximum idle time of all objects in the pool.
 	 */
 	public long getMaxIdle() {
 
@@ -247,13 +249,19 @@ public class ObjectPooler<T> {
 	/**
 	 * Set the maximum allowed object idle time.
 	 * 
-	 * @param timeoutIdle
+	 * @param timeoutIdle Expire any objects which have been idle for longer then
+	 *                    the maximum allowed time.
 	 */
 	public void setMaxIdleTime(long timeoutIdle) {
 
 		this.timeoutIdle = timeoutIdle;
 	}
 
+	/**
+	 * Get the object which has been locked the most.
+	 * 
+	 * @return The number of times the object has been locked.
+	 */
 	public long getMaxLockCount() {
 
 		long maxCount = 0;
@@ -278,6 +286,12 @@ public class ObjectPooler<T> {
 		return maxCount;
 	}
 
+	/**
+	 * Set the maximum number of times an object is allowed to be locked.
+	 * 
+	 * @param maxLockCount Expire any objects which have been locked more then the
+	 *                     maximum allowable amount.
+	 */
 	public void setMaxLockCount(long maxLockCount) {
 
 		this.maxLockCount = maxLockCount;
@@ -286,8 +300,8 @@ public class ObjectPooler<T> {
 	/**
 	 * Destroy a pooled object
 	 * 
-	 * @param t
-	 * @return
+	 * @param t The object.
+	 * @return Returns true if the object was destroyed from the pool.
 	 */
 	public synchronized boolean destroy(T t) {
 
@@ -316,7 +330,7 @@ public class ObjectPooler<T> {
 	}
 
 	/**
-	 * Shutdown the pooler, destroying all objects.
+	 * Shutdown the pooler and destroy all objects.
 	 */
 	public synchronized void shutdown() {
 
@@ -361,7 +375,7 @@ public class ObjectPooler<T> {
 	/**
 	 * Create a new object instance.
 	 * 
-	 * @return
+	 * @return The object.
 	 */
 	private synchronized T create() throws PooledObjectException {
 

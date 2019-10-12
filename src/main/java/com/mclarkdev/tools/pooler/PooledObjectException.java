@@ -1,14 +1,10 @@
-package org.aihac.utils.pooler;
+package com.mclarkdev.tools.pooler;
 
 public class PooledObjectException extends Exception {
 
-	/**
-	 * 
-	 */
-	private static final long serialVersionUID = -1042352071493820717L;
+	private static final long serialVersionUID = 1;
 
 	public PooledObjectException(String message) {
 		super(message);
-		
 	}
 }
