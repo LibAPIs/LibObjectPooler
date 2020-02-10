@@ -10,7 +10,7 @@
 
 	<groupId>com.mclarkdev.tools</groupId>
 	<artifactId>pooler</artifactId>
-	<version>1.0</version>
+	<version>PRERELEASE</version>
 	<packaging>jar</packaging>
 
 	<name>pooler</name>

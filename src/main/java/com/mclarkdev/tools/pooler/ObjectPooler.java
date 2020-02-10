@@ -15,6 +15,8 @@ public class ObjectPooler<T> {
 
 	private PooledObjectController<T> controller;
 
+	private Timer expireTimer = new Timer();
+
 	private long expireCheckInterval = 15 * 1000;
 
 	private int maxPoolSize;
@@ -40,7 +42,7 @@ public class ObjectPooler<T> {
 
 		objectPool = new ConcurrentHashMap<T, PooledObjectLock>();
 
-		(new Timer()).scheduleAtFixedRate(new TimerTask() {
+		expireTimer.scheduleAtFixedRate(new TimerTask() {
 
 			@Override
 			public void run() {
@@ -333,6 +335,9 @@ public class ObjectPooler<T> {
 	 * Shutdown the pooler and destroy all objects.
 	 */
 	public synchronized void shutdown() {
+
+		// stop the expire timer
+		expireTimer.cancel();
 
 		// loop each existing object
 		for (T t : objectPool.keySet()) {
