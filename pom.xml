@@ -9,16 +9,16 @@
 	</organization>
 
 	<groupId>com.mclarkdev.tools</groupId>
-	<artifactId>pooler</artifactId>
+	<artifactId>libobjectpooler</artifactId>
 	<version>PRERELEASE</version>
 	<packaging>jar</packaging>
 
-	<name>pooler</name>
-	<url>https://www.mclarkdev.com/tools/pooler</url>
+	<name>libobjectpooler</name>
+	<url>https://www.mclarkdev.com/tools/libobjectpooler</url>
 	<description>An generic object pool capable of expiring old objects.</description>
 
 	<scm>
-		<url>https://git.mclarkdev.com/MClarkDev.com--Public/ObjectPooler.git</url>
+		<url>https://git.mclarkdev.com/MClarkDev.com--Public/libobjectpooler.git</url>
 	</scm>
 
 	<properties>
