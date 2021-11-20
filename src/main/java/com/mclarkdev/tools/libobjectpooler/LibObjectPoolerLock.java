@@ -25,17 +25,23 @@ public class LibObjectPoolerLock {
 
 	public boolean lock() {
 
-		locked = true;
-		lastLocked = System.currentTimeMillis();
-		lockCount++;
+		synchronized (this) {
 
-		return locked;
+			if (locked) {
+				return false;
+			}
+
+			locked = true;
+			lastLocked = System.currentTimeMillis();
+			lockCount++;
+
+			return true;
+		}
 	}
 
-	public boolean unlock() {
+	public void unlock() {
 
 		locked = false;
-		return locked;
 	}
 
 	public long getLastLocked() {

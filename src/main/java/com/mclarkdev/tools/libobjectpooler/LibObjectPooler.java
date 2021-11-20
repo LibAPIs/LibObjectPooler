@@ -163,7 +163,8 @@ public class LibObjectPooler<T> {
 		}
 
 		// return successful unlock
-		return lock.unlock();
+		lock.unlock();
+		return true;
 	}
 
 	/**
