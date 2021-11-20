@@ -26,6 +26,7 @@ public class LibObjectPooler<T> {
 	private long timeoutIdle = 0;
 	private long maxAge = 0;
 	private long maxLockCount = 0;
+	private long maxLockTime = 0;
 
 	private ConcurrentHashMap<T, LibObjectPoolerLock> objectPool;
 
@@ -315,6 +316,18 @@ public class LibObjectPooler<T> {
 	}
 
 	/**
+	 * Set the maximum amount of time an object can remain locked before being
+	 * forcibly destroyed.
+	 * 
+	 * @param maxLockTime Force expire objects which have been locked more then this
+	 *                    amount of time.
+	 */
+	public void setMaxLockTime(long maxLockTime) {
+
+		this.maxLockTime = maxLockTime;
+	}
+
+	/**
 	 * Destroy a pooled object
 	 * 
 	 * @param t The object.
@@ -397,11 +410,17 @@ public class LibObjectPooler<T> {
 			long lockCount = lock.getLockCount();
 			boolean hitMaxLocks = (maxLockCount > 0 && lockCount > maxLockCount);
 
-			// check if should be destroyed
-			if ((expired || hitMaxLocks) && lock.lock()) {
+			// kill if locked for too long
+			long killAt = lock.getLastLocked() + maxLockTime;
+			boolean killable = (maxLockTime > 0 && killAt > now);
 
-				// destroy
-				destroy(t);
+			// check if should be destroyed
+			if (expired || hitMaxLocks) {
+
+				// lock / destroy
+				if (killable || lock.lock()) {
+					destroy(t);
+				}
 			}
 		}
 	}
