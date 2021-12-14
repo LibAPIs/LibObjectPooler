@@ -329,35 +329,50 @@ public class LibObjectPooler<T> {
 	}
 
 	/**
-	 * Destroy a pooled object
+	 * Destroys a pooled object, if not locked.
 	 * 
 	 * @param t The object.
 	 * @return Returns true if the object was destroyed from the pool.
 	 */
-	public synchronized boolean destroy(T t) {
+	public boolean destroy(T t) {
 
-		// get the lock for the provided object
-		LibObjectPoolerLock lock = objectPool.get(t);
-		if (lock == null) {
+		return destroy(t, false);
+	}
 
-			// false if object is not pooled
-			return false;
+	/**
+	 * Destroy a pooled object, optionally with force.
+	 * 
+	 * @param t The object.
+	 * @return Returns true if the object was destroyed from the pool.
+	 */
+	public synchronized boolean destroy(T t, boolean force) {
+
+		synchronized (t) {
+
+			// get the lock for the provided object
+			LibObjectPoolerLock lock = objectPool.get(t);
+			if (lock == null) {
+
+				// false if object is not pooled
+				return false;
+			}
+
+			// check that it is not locked
+			if (!force && lock.isLocked()) {
+
+				return false;
+			}
+
+			// remove from map
+			objectPool.remove(t);
+
+			// call destroy
+			controller.onDestroy(t);
 		}
-
-		// check that it is not locked
-		if (lock.isLocked()) {
-
-			return false;
-		}
-
-		// remove from map
-		objectPool.remove(t);
-
-		// call destroy
-		controller.onDestroy(t);
 
 		// return success
 		return true;
+
 	}
 
 	public synchronized int destroyAll() {
@@ -419,9 +434,7 @@ public class LibObjectPooler<T> {
 			if (expired || hitMaxLocks) {
 
 				// lock / destroy
-				if (killable || lock.lock()) {
-					destroy(t);
-				}
+				destroy(t, killable);
 			}
 		}
 	}
