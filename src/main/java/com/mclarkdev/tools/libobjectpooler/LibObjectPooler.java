@@ -28,6 +28,8 @@ public class LibObjectPooler<T> {
 	private long maxLockCount = 0;
 	private long maxLockTime = 0;
 
+	private int backoffCount = 0;
+
 	private ConcurrentHashMap<T, LibObjectPoolerLock> objectPool;
 
 	/**
@@ -76,8 +78,20 @@ public class LibObjectPooler<T> {
 			}
 		}
 
-		// return a new object
-		return create();
+		try {
+
+			// return a new object
+			T t = create();
+			return t;
+
+		} catch (LibObjectPoolerBackoffException e) {
+
+			try {
+				Thread.sleep(e.getBackoffDelay());
+			} catch (InterruptedException ex) {
+			}
+			return get();
+		}
 	}
 
 	public synchronized T getWait() throws LibObjectPoolerException {
@@ -443,8 +457,9 @@ public class LibObjectPooler<T> {
 	 * Create a new object instance.
 	 * 
 	 * @return The object.
+	 * @throws LibObjectPoolerBackoffException
 	 */
-	private synchronized T create() throws LibObjectPoolerException {
+	private synchronized T create() throws LibObjectPoolerException, LibObjectPoolerBackoffException {
 
 		// return null if the pool is full
 		if (getPoolSize() >= maxPoolSize) {
@@ -455,14 +470,26 @@ public class LibObjectPooler<T> {
 			throw new LibObjectPoolerException("pool is not allowing new objects");
 		}
 
-		// create a new object
-		T t = controller.onCreate();
-		LibObjectPoolerLock lock = new LibObjectPoolerLock();
+		try {
 
-		// add to pool
-		objectPool.put(t, lock);
+			// create a new object
+			T t = controller.onCreate();
 
-		// return
-		return t;
+			if (t == null) {
+				throw new IllegalArgumentException("controller returned null object");
+			}
+
+			// reset backoff counter
+			backoffCount = 0;
+
+			// add to pool
+			objectPool.put(t, new LibObjectPoolerLock());
+
+			// return the object
+			return t;
+		} catch (Exception e) {
+
+			throw new LibObjectPoolerBackoffException((++backoffCount), 2.0, e);
+		}
 	}
 }
