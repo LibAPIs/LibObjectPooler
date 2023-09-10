@@ -5,11 +5,11 @@ import java.util.TimerTask;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * A simple object pooler.
+ * LibObjectPooler // LibObjectPooler
  * 
- * @author Matthew Clark
- *
- * @param <T>
+ * A generic object pool capable of managing and expiring old objects.
+ * 
+ * @param <T> the object type to pool
  */
 public class LibObjectPooler<T> {
 
@@ -94,15 +94,25 @@ public class LibObjectPooler<T> {
 		}
 	}
 
+	/**
+	 * Waits for an instance of a pooled object.
+	 * 
+	 * Uses default timeout (15s)
+	 * 
+	 * @return an instance of the pooled object
+	 * @throws LibObjectPoolerException failed to get object before timeout
+	 */
 	public synchronized T getWait() throws LibObjectPoolerException {
 
 		return getWait(15 * 1000);
 	}
 
 	/**
-	 * Wait for an object lock.
+	 * Waits for an instance of a pooled object.
 	 * 
-	 * @return An instance of the object from the pool.
+	 * @param timeout the time to wait
+	 * @return an instance of the pooled object
+	 * @throws LibObjectPoolerException failed to get object before timeout
 	 */
 	public synchronized T getWait(long timeout) throws LibObjectPoolerException {
 
@@ -389,6 +399,11 @@ public class LibObjectPooler<T> {
 
 	}
 
+	/**
+	 * Request that all items in the pool be destroyed.
+	 * 
+	 * @return number of items destroyed
+	 */
 	public synchronized int destroyAll() {
 
 		int destroyed = 0;
