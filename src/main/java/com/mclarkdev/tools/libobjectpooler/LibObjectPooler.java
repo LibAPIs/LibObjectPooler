@@ -42,6 +42,10 @@ public class LibObjectPooler<T> {
 	 */
 	public LibObjectPooler(int maxPoolSize, LibObjectPoolerController<T> controller) {
 
+		if (controller == null) {
+			throw new IllegalArgumentException("controller cannot be null");
+		}
+
 		this.controller = controller;
 		this.maxPoolSize = maxPoolSize;
 
@@ -62,7 +66,7 @@ public class LibObjectPooler<T> {
 	 * 
 	 * @return An instance of the object from the pool.
 	 */
-	public synchronized T get() throws LibObjectPoolerException {
+	public T get() throws LibObjectPoolerException {
 
 		// loop each existing object
 		for (T t : objectPool.keySet()) {
@@ -139,7 +143,7 @@ public class LibObjectPooler<T> {
 	}
 
 	/**
-	 * Get the current size of the pool.
+	 * Get the current size of the object pool.
 	 * 
 	 * @return The number of objects currently in the pool.
 	 */
@@ -150,12 +154,13 @@ public class LibObjectPooler<T> {
 	}
 
 	/**
-	 * Get the max size of the pool.
+	 * Get the max size of the object pool.
 	 * 
 	 * @return The maximum number of objects allowed in the pool.
 	 */
 	public int getMaxPoolSize() {
 
+		// get the max size of the object pool
 		return maxPoolSize;
 	}
 
@@ -176,18 +181,26 @@ public class LibObjectPooler<T> {
 	 * @param t The locked object.
 	 * @return Returns true if the object was successfully returned to the pool.
 	 */
-	public synchronized boolean release(T t) {
+	public boolean release(T t) {
 
-		// get the lock for the provided object
-		LibObjectPoolerLock lock = objectPool.get(t);
-		if (lock == null) {
-
-			// false if object is not pooled
-			return false;
+		if (t == null) {
+			throw new IllegalArgumentException("cannot release null object");
 		}
 
-		// return successful unlock
-		lock.unlock();
+		synchronized (t) {
+
+			// get the lock for the provided object
+			LibObjectPoolerLock lock = objectPool.get(t);
+			if (lock == null) {
+
+				// false if object is not pooled
+				return false;
+			}
+
+			// return successful unlock
+			lock.unlock();
+		}
+
 		return true;
 	}
 
@@ -369,7 +382,11 @@ public class LibObjectPooler<T> {
 	 * @param t The object.
 	 * @return Returns true if the object was destroyed from the pool.
 	 */
-	public synchronized boolean destroy(T t, boolean force) {
+	public boolean destroy(T t, boolean force) {
+
+		if (t == null) {
+			throw new IllegalArgumentException("cannot destroy null object");
+		}
 
 		synchronized (t) {
 
@@ -390,13 +407,19 @@ public class LibObjectPooler<T> {
 			// remove from map
 			objectPool.remove(t);
 
-			// call destroy
-			controller.onDestroy(t);
+			try {
+
+				// call implemented destroy
+				controller.onDestroy(t);
+			} catch (Exception | Error e) {
+
+				// bubble up the failure
+				throw new IllegalStateException("failed to destroy object", e);
+			}
 		}
 
 		// return success
 		return true;
-
 	}
 
 	/**
@@ -446,23 +469,30 @@ public class LibObjectPooler<T> {
 			LibObjectPoolerLock lock = objectPool.get(t);
 
 			// calculate expiration times
-			long now = System.currentTimeMillis();
-			long idle = lock.getLastLocked() + timeoutIdle;
-			long expires = lock.getCreated() + maxAge;
-			boolean expired = (timeoutIdle > 0 && now > idle) || (maxAge > 0 && now > expires);
+			long timeNow = System.currentTimeMillis();
+			long timeIdle = lock.getLastLocked() + timeoutIdle;
+			long timeExpires = lock.getCreated() + maxAge;
 
-			// check if max lock count reached
+			// check if past expiration timers
+			boolean isExpiredIdle = ((timeoutIdle > 0) && (timeNow > timeIdle));
+			boolean isExpiredAge = ((maxAge > 0) && (timeNow > timeExpires));
+			boolean isExpired = (isExpiredIdle || isExpiredAge);
+
+			// check if max lock count enabled and reached reached
 			long lockCount = lock.getLockCount();
-			boolean hitMaxLocks = (maxLockCount > 0 && lockCount > maxLockCount);
+			boolean hitMaxLocks = ((maxLockCount > 0) && (lockCount > maxLockCount));
 
-			// kill if locked for too long
-			long killAt = lock.getLastLocked() + maxLockTime;
-			boolean killable = (maxLockTime > 0 && killAt > now);
+			// kill if max lock enabled and locked for too long
+			long killAt = (lock.getLastLocked() + maxLockTime);
+			boolean killable = ((maxLockTime > 0) && (killAt > timeNow));
 
-			// check if should be destroyed
-			if (expired || hitMaxLocks) {
+			// determine if should be destroyed
+			boolean destroy = (killable || isExpired || hitMaxLocks);
 
-				// lock / destroy
+			// destroy the object
+			if (destroy) {
+
+				// attempt to destroy
 				destroy(t, killable);
 			}
 		}
@@ -474,7 +504,7 @@ public class LibObjectPooler<T> {
 	 * @return The object.
 	 * @throws LibObjectPoolerBackoffException
 	 */
-	private synchronized T create() throws LibObjectPoolerException, LibObjectPoolerBackoffException {
+	private T create() throws LibObjectPoolerException, LibObjectPoolerBackoffException {
 
 		// return null if the pool is full
 		if (getPoolSize() >= maxPoolSize) {
