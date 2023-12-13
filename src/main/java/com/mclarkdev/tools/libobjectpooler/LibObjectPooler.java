@@ -467,24 +467,24 @@ public class LibObjectPooler<T> {
 
 			// get the lock
 			LibObjectPoolerLock lock = objectPool.get(t);
+			boolean locked = lock.isLocked();
 
 			// calculate expiration times
 			long timeNow = System.currentTimeMillis();
-			long timeIdle = lock.getLastLocked() + timeoutIdle;
-			long timeExpires = lock.getCreated() + maxAge;
+			long timeIdle = (lock.getLastLocked() + timeoutIdle);
+			long timeExpires = (lock.getCreated() + maxAge);
+			long timeKill = (lock.getLastLocked() + maxLockTime);
 
-			// check if past expiration timers
+			// check if past expiration timers for idle / age
 			boolean isExpiredIdle = ((timeoutIdle > 0) && (timeNow > timeIdle));
 			boolean isExpiredAge = ((maxAge > 0) && (timeNow > timeExpires));
 			boolean isExpired = (isExpiredIdle || isExpiredAge);
 
-			// check if max lock count enabled and reached reached
-			long lockCount = lock.getLockCount();
-			boolean hitMaxLocks = ((maxLockCount > 0) && (lockCount > maxLockCount));
+			// check if max lock count enabled and maximum locks reached
+			boolean hitMaxLocks = ((maxLockCount > 0) && (lock.getLockCount() > maxLockCount));
 
 			// kill if max lock enabled and locked for too long
-			long killAt = (lock.getLastLocked() + maxLockTime);
-			boolean killable = ((maxLockTime > 0) && (killAt > timeNow));
+			boolean killable = ((maxLockTime > 0) && (locked) && (timeNow > timeKill));
 
 			// determine if should be destroyed
 			boolean destroy = (killable || isExpired || hitMaxLocks);
